@@ -42,4 +42,16 @@ export class StudentsService {
       },
     });
   }
+
+  async findByCourse(courseId: string): Promise<Student[]> {
+    return this.prismaService.student.findMany({
+      where: {
+        courses: {
+          every: {
+            id: courseId,
+          },
+        },
+      },
+    });
+  }
 }
