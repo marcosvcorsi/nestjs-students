@@ -1,16 +1,28 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 @InputType()
-export class UpdateCourseDto {
+export class UpdateCourseInput {
   @Field()
   @IsString()
   @IsNotEmpty()
   @IsUUID('4')
   id: string;
 
-  @Field()
+  @Field({ nullable: true })
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   name: string;
+
+  @Field(() => [String])
+  @IsArray()
+  @IsString({ each: true })
+  @IsUUID('4', { each: true })
+  students: string[];
 }

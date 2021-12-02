@@ -11,22 +11,32 @@ datasource db {
 }
 
 model Student {
-  id        String   @id @default(uuid())
+  id        String          @id @default(uuid())
   name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  courses   Course[] @relation(references: [id])
+  email     String          @unique
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  courses   StudentCourse[]
 
   @@map("students")
 }
 
 model Course {
-  id        String    @id @default(uuid())
+  id        String          @id @default(uuid())
   name      String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  students  Student[] @relation(references: [id])
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  students  StudentCourse[]
 
   @@map("courses")
+}
+
+model StudentCourse {
+  student   Student @relation(fields: [studentId], references: [id])
+  studentId String
+  course    Course  @relation(fields: [courseId], references: [id])
+  courseId  String
+
+  @@id([studentId, courseId])
+  @@map("student_course")
 }

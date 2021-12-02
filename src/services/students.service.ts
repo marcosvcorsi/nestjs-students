@@ -6,6 +6,16 @@ import { PrismaService } from './prisma.service';
 export class StudentsService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  async findByIds(ids: string[]): Promise<Student[]> {
+    return this.prismaService.student.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    });
+  }
+
   async findById(id: string): Promise<Student> {
     return this.prismaService.student.findUnique({
       where: {
@@ -48,7 +58,7 @@ export class StudentsService {
       where: {
         courses: {
           every: {
-            id: courseId,
+            courseId,
           },
         },
       },

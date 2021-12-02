@@ -1,5 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import {
+  IsArray,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -8,7 +9,7 @@ import {
 } from 'class-validator';
 
 @InputType()
-export class UpdateStudentDto {
+export class UpdateStudentInput {
   @Field()
   @IsString()
   @IsNotEmpty()
@@ -25,4 +26,10 @@ export class UpdateStudentDto {
   @IsEmail()
   @IsOptional()
   email?: string;
+
+  @Field(() => [String])
+  @IsArray()
+  @IsString({ each: true })
+  @IsUUID('4', { each: true })
+  courses: string[];
 }

@@ -1,4 +1,5 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { Course } from './course.model';
 
 @ObjectType({ description: 'student' })
 export class Student {
@@ -16,4 +17,7 @@ export class Student {
 
   @Field()
   updatedAt: Date;
+
+  @Field(() => [Course], { nullable: true })
+  courses?: Course[];
 }

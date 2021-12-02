@@ -1,13 +1,25 @@
 import { NotFoundException } from '@nestjs/common';
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CreateStudentDto } from 'src/dtos/create-student.dto';
-import { UpdateStudentDto } from 'src/dtos/update-student.dto';
+import {
+  Args,
+  Mutation,
+  Parent,
+  Query,
+  ResolveField,
+  Resolver,
+} from '@nestjs/graphql';
+import { CreateStudentInput } from 'src/dtos/create-student.dto';
+import { UpdateStudentInput } from 'src/dtos/update-student.dto';
+import { Course } from 'src/models/course.model';
 import { Student } from 'src/models/student.model';
+import { CoursesServices } from 'src/services/courses.service';
 import { StudentsService } from 'src/services/students.service';
 
 @Resolver(() => Student)
 export class StudentsResolver {
-  constructor(private readonly studentsService: StudentsService) {}
+  constructor(
+    private readonly studentsService: StudentsService,
+    private readonly coursesService: CoursesServices,
+  ) {}
 
   @Query(() => [Student])
   async students(): Promise<Student[]> {
@@ -26,14 +38,38 @@ export class StudentsResolver {
   }
 
   @Mutation(() => Student)
-  createStudent(@Args('data') data: CreateStudentDto): Promise<Student> {
+  createStudent(@Args('data') data: CreateStudentInput): Promise<Student> {
     return this.studentsService.create(data);
   }
 
   @Mutation(() => Student)
-  updateStudent(@Args('data') data: UpdateStudentDto): Promise<Student> {
-    const { id, ...input } = data;
+  async updateStudent(
+    @Args('data') data: UpdateStudentInput,
+  ): Promise<Student> {
+    const { id, courses: coursesIds, ...input } = data;
 
-    return this.studentsService.update(id, input);
+    const courses = await this.coursesService.findByIds(coursesIds);
+
+    return this.studentsService.update(id, {
+      ...input,
+      courses: {
+        connectOrCreate: courses.map((course) => ({
+          where: {
+            studentId_courseId: {
+              courseId: course.id,
+              studentId: id,
+            },
+          },
+          create: {
+            courseId: course.id,
+          },
+        })),
+      },
+    });
+  }
+
+  @ResolveField()
+  async courses(@Parent() student: Student): Promise<Course[]> {
+    return this.coursesService.findByStudent(student.id);
   }
 }
