@@ -20,7 +20,8 @@ export class UpdateCourseInput {
   @IsOptional()
   name: string;
 
-  @Field(() => [String])
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   @IsUUID('4', { each: true })

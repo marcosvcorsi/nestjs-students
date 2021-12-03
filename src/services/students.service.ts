@@ -57,7 +57,7 @@ export class StudentsService {
     return this.prismaService.student.findMany({
       where: {
         courses: {
-          every: {
+          some: {
             courseId,
           },
         },
