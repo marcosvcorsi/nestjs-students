@@ -8,6 +8,7 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { CreateStudentInput } from 'src/dtos/create-student.dto';
+import { RemoveStudentCourseInput } from 'src/dtos/remove-student-course.dto';
 import { UpdateStudentInput } from 'src/dtos/update-student.dto';
 import { Course } from 'src/models/course.model';
 import { Student } from 'src/models/student.model';
@@ -46,24 +47,40 @@ export class StudentsResolver {
   async updateStudent(
     @Args('data') data: UpdateStudentInput,
   ): Promise<Student> {
-    const { id, courses: coursesIds, ...input } = data;
-
-    const courses = await this.coursesService.findByIds(coursesIds);
+    const { id, courses, ...input } = data;
 
     return this.studentsService.update(id, {
       ...input,
       courses: {
-        connectOrCreate: courses.map((course) => ({
+        connectOrCreate: courses.map((courseId) => ({
           where: {
             studentId_courseId: {
-              courseId: course.id,
+              courseId: courseId,
               studentId: id,
             },
           },
           create: {
-            courseId: course.id,
+            courseId: courseId,
           },
         })),
+      },
+    });
+  }
+
+  @Mutation(() => Student)
+  async removeStudentCourse(
+    @Args('data') data: RemoveStudentCourseInput,
+  ): Promise<Student> {
+    const { studentId, courseId } = data;
+
+    return this.studentsService.update(studentId, {
+      courses: {
+        delete: {
+          studentId_courseId: {
+            studentId,
+            courseId,
+          },
+        },
       },
     });
   }
