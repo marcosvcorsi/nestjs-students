@@ -51,19 +51,23 @@ export class StudentsResolver {
 
     return this.studentsService.update(id, {
       ...input,
-      courses: {
-        connectOrCreate: courses.map((courseId) => ({
-          where: {
-            studentId_courseId: {
-              courseId: courseId,
-              studentId: id,
+      ...(courses
+        ? {
+            courses: {
+              connectOrCreate: courses.map((courseId) => ({
+                where: {
+                  studentId_courseId: {
+                    courseId: courseId,
+                    studentId: id,
+                  },
+                },
+                create: {
+                  courseId: courseId,
+                },
+              })),
             },
-          },
-          create: {
-            courseId: courseId,
-          },
-        })),
-      },
+          }
+        : {}),
     });
   }
 

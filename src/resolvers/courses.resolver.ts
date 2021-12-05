@@ -54,25 +54,27 @@ export class CoursesResolver {
 
   @Mutation(() => Course)
   async updateCourse(@Args('data') data: UpdateCourseInput): Promise<Course> {
-    const { id, students: studentsIds, ...input } = data;
-
-    const students = await this.studentsService.findByIds(studentsIds);
+    const { id, students, ...input } = data;
 
     return this.coursesService.update(id, {
       ...input,
-      students: {
-        connectOrCreate: students.map((student) => ({
-          where: {
-            studentId_courseId: {
-              courseId: id,
-              studentId: student.id,
+      ...(students
+        ? {
+            students: {
+              connectOrCreate: students.map((studentId) => ({
+                where: {
+                  studentId_courseId: {
+                    courseId: id,
+                    studentId,
+                  },
+                },
+                create: {
+                  studentId,
+                },
+              })),
             },
-          },
-          create: {
-            studentId: student.id,
-          },
-        })),
-      },
+          }
+        : {}),
     });
   }
 
