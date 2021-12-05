@@ -1,6 +1,7 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, UseGuards } from '@nestjs/common';
 import {
   Args,
+  Context,
   Mutation,
   Parent,
   Query,
@@ -9,6 +10,7 @@ import {
 } from '@nestjs/graphql';
 import { CreateCourseInput } from 'src/dtos/create-course.dto';
 import { UpdateCourseInput } from 'src/dtos/update-course.dto';
+import { GqlAuthGuard } from 'src/guards/auth.guard';
 import { Course } from 'src/models/course.model';
 import { Student } from 'src/models/student.model';
 import { CoursesServices } from 'src/services/courses.service';
@@ -24,6 +26,14 @@ export class CoursesResolver {
   @Query(() => [Course])
   async courses(): Promise<Course[]> {
     return this.coursesService.find();
+  }
+
+  @UseGuards(GqlAuthGuard)
+  @Query(() => [Course])
+  async myCourses(@Context() context): Promise<Course[]> {
+    const { user } = context.req;
+
+    return this.coursesService.findByStudent(user.id);
   }
 
   @Query(() => Course)
