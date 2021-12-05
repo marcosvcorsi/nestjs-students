@@ -1,10 +1,14 @@
 import { Prisma, Student } from '.prisma/client';
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { HashProvider } from 'src/provider/hash.provider';
 import { PrismaService } from './prisma.service';
 
 @Injectable()
 export class StudentsService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly hashProvider: HashProvider,
+  ) {}
 
   async findByIds(ids: string[]): Promise<Student[]> {
     return this.prismaService.student.findMany({
@@ -39,8 +43,13 @@ export class StudentsService {
       throw new BadRequestException('E-mail already exists');
     }
 
+    const hashedPassword = await this.hashProvider.generate(data.password);
+
     return this.prismaService.student.create({
-      data,
+      data: {
+        ...data,
+        password: hashedPassword,
+      },
     });
   }
 
