@@ -2,10 +2,13 @@ FROM node:14-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY ./package*.json ./
+COPY ./prisma ./prisma/
 
 RUN npm ci --silent
 
 COPY . .
 
-CMD ["npm", "run", "start:dev"]
+RUN npm run build && npm prune --production 
+
+CMD [ "npm", "run", "start:prod" ]
