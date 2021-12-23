@@ -18,6 +18,7 @@ data "aws_caller_identity" "current" {}
 
 locals {
   account_id = data.aws_caller_identity.current.account_id
+  name       = "${var.environment}-${var.service_name}"
 }
 
 resource "aws_iam_role" "ecs_task_execution_role" {
@@ -52,18 +53,18 @@ resource "aws_iam_role_policy_attachment" "ecs_tasks_execution_role_ecs_attachme
 }
 
 resource "aws_cloudwatch_log_group" "log_group" {
-  name = var.service_name
+  name = local.name
 }
 
 resource "aws_ecs_task_definition" "task_definition" {
-  family                   = "${var.environment}-${var.service_name}-td"
+  family                   = "${local.name}-td"
   requires_compatibilities = ["EC2"]
   memory                   = "128"
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
   container_definitions = jsonencode([
     {
-      name  = "podcast-api"
-      image = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com/podcasts-api:${var.image_tag}"
+      name  = var.service_name
+      image = "${local.account_id}.dkr.ecr.${var.region}.amazonaws.com/${var.service_name}:${var.image_tag}"
       portMappings = [
         {
           containerPort = 3000
@@ -72,13 +73,17 @@ resource "aws_ecs_task_definition" "task_definition" {
       secrets = [
         {
           name      = "JWT_SECRET"
-          valueFrom = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/JWT_SECRET"
+          valueFrom = "arn:aws:ssm:${var.region}:${local.account_id}:parameter/JWT_SECRET"
+        },
+        {
+          name      = "DATABASE_URL"
+          valueFrom = "arn:aws:ssm:${var.region}:${local.account_id}:parameter/DATABASE_URL"
         }
       ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = "${var.environment}-${var.service_name}",
+          "awslogs-group"         = local.name,
           "awslogs-region"        = var.region,
           "awslogs-stream-prefix" = "ecs"
         }
@@ -88,7 +93,7 @@ resource "aws_ecs_task_definition" "task_definition" {
 }
 
 resource "aws_ecs_service" "service" {
-  name            = "${var.environment}-${var.service_name}"
+  name            = local.name
   cluster         = var.cluster_name
   launch_type     = "EC2"
   desired_count   = 1
