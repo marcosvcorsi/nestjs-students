@@ -1,0 +1,101 @@
+# This is a basic workflow to help you get started with Actions
+name: Release
+
+# Controls when the action will run.
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Setup node version
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      # NPM Cache
+      - uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm i --silent
+
+      # Run Build
+      - name: Run Build
+        run: npm run build
+
+      # Get version from package.json
+      - name: Extract package version
+        uses: nyaa8/package-version@v1.0.3
+
+      # Show version
+      - name: Print package version
+        run: echo ${{ env.PACKAGE_VERSION }}
+
+      # Configure AWS Credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Upload a docker image to AWS ECR
+      - name: Upload image to AWS ECR
+        uses: appleboy/docker-ecr-action@master
+        with:
+          access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          registry: ${{ secrets.ECR_REGISTRY }}
+          repo: nestjs-students
+          tags: ${{ env.PACKAGE_VERSION }}
+
+      - name: HashiCorp - Setup Terraform
+        uses: hashicorp/setup-terraform@v1.2.1
+
+      - name: Set env BRANCH
+        run: echo "BRANCH=$(echo $GITHUB_REF | cut -d'/' -f 3)" >> $GITHUB_ENV
+
+      - name: Set env STAGE
+        run: |
+          if [[ $BRANCH == 'main' ]]; then
+              echo "STAGE=prod" >> "$GITHUB_ENV"
+          else
+              echo "STAGE=dev" >> "$GITHUB_ENV"
+          fi
+      - name: Terraform init
+        run: |
+          cd terraform &&
+          terraform init \
+            -backend-config="bucket=mvc-terraform-state" \
+            -backend-config="key=${{ env.STAGE }}-nestjs-students/terraform.tfstate" \
+            -backend-config="region=${{ secrets.AWS_REGION }}"
+
+      - name: Terraform apply
+        run: |
+          cd terraform &&
+          terraform apply \
+            -var="environment=${{ env.STAGE }}" \
+            -var="region=${{ secrets.AWS_REGION }}" \
+            -var="image_tag=${{ env.PACKAGE_VERSION }}" \
+            -auto-approve
